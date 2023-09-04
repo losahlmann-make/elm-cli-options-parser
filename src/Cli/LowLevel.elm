@@ -4,6 +4,7 @@ import Cli.Decode
 import Cli.OptionsParser as OptionsParser exposing (OptionsParser)
 import Cli.OptionsParser.BuilderState as BuilderState
 import Cli.OptionsParser.MatchResult as MatchResult exposing (MatchResult)
+import List.Extra
 import Set exposing (Set)
 
 
@@ -128,10 +129,15 @@ helpText programName version description optionsParsers =
         ++ usageText programName
         ++ "\n\n"
         ++ flagsText
-        ++ (optionsParsers
-                |> List.map (OptionsParser.synopsis programName)
-                |> String.join "\n"
-           )
+        ++ "\n"
+        ++ commandsText optionsParsers
+
+
+
+-- ++ (optionsParsers
+--         |> List.map (OptionsParser.synopsis programName)
+--         |> String.join "\n"
+--    )
 
 
 usageText : String -> String
@@ -147,3 +153,14 @@ flagsText =
     --help      Show help for command
     --version   Show version
     """
+
+
+commandsText : List (OptionsParser msg builderState) -> String
+commandsText optionsParsers =
+    optionsParsers
+        |> List.map (OptionsParser.getSubCommand >> Maybe.andThen List.head)
+        |> List.filterMap identity
+        |> List.Extra.unique
+        |> List.map (String.append "    ")
+        |> String.join "\n"
+        |> (++) "COMMANDS\n"
