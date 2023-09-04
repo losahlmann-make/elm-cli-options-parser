@@ -217,13 +217,20 @@ all =
             [ test "doesn't match if sub optionsParser doesn't match" <|
                 \() ->
                     expectNoMatch [ "start" ]
-                        (OptionsParser.buildSubCommand "help" 123
+                        (OptionsParser.buildSubCommand [ "help" ] 123
                             |> OptionsParser.end
                         )
             , test "matches if sub optionsParser is first word" <|
                 \() ->
                     expectMatch [ "help" ]
-                        (OptionsParser.buildSubCommand "help" 123
+                        (OptionsParser.buildSubCommand [ "help" ] 123
+                            |> OptionsParser.end
+                        )
+                        123
+            , test "matches if sub optionsParser is first words" <|
+                \() ->
+                    expectMatch [ "help", "specific" ]
+                        (OptionsParser.buildSubCommand [ "help", "specific" ] 123
                             |> OptionsParser.end
                         )
                         123

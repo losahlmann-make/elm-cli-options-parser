@@ -137,6 +137,7 @@ import Cli.Option exposing (Option(..))
 import Cli.OptionsParser.BuilderState as BuilderState
 import Cli.OptionsParser.MatchResult
 import Cli.UsageSpec as UsageSpec exposing (UsageSpec)
+import List.Extra
 import Occurences exposing (Occurences(..))
 import Tokenizer exposing (ParsedOption)
 
@@ -159,7 +160,7 @@ synopsis programName optionsParser =
 
 {-| Low-level function, for internal use.
 -}
-getSubCommand : OptionsParser cliOptions builderState -> Maybe String
+getSubCommand : OptionsParser cliOptions builderState -> Maybe (List String)
 getSubCommand (OptionsParser { subCommand }) =
     subCommand
 
@@ -186,16 +187,19 @@ tryMatch argv ((OptionsParser { usageSpecs, subCommand }) as optionsParser) =
                                     , usageSpecs = usageSpecs
                                     }
 
-                            ( Just buildSubCommandName, actualSubCommand :: remainingOperands ) ->
-                                if actualSubCommand == buildSubCommandName then
-                                    Ok
-                                        { options = record.options
-                                        , operands = remainingOperands
-                                        , usageSpecs = usageSpecs
-                                        }
+                            ( Just buildSubCommandName, sc :: ops ) ->
+                                -- at least one operand for the subcommand name needs to be present
+                                case List.Extra.splitAt (List.length buildSubCommandName) record.operands of
+                                    ( actualSubCommand, remainingOperands ) ->
+                                        if actualSubCommand == buildSubCommandName then
+                                            Ok
+                                                { options = record.options
+                                                , operands = remainingOperands
+                                                , usageSpecs = usageSpecs
+                                                }
 
-                                else
-                                    Err { errorMessage = "Sub optionsParser does not match", options = record.options }
+                                        else
+                                            Err { errorMessage = "Sub optionsParser does not match", options = record.options }
 
                             ( Just buildSubCommandName, [] ) ->
                                 Err { errorMessage = "No sub optionsParser provided", options = record.options }
@@ -312,7 +316,7 @@ type alias OptionsParserRecord cliOptions =
     { decoder : Decoder cliOptions
     , usageSpecs : List UsageSpec
     , description : Maybe String
-    , subCommand : Maybe String
+    , subCommand : Maybe (List String)
     }
 
 
@@ -346,7 +350,7 @@ build cliOptionsConstructor =
 {-| Start an `OptionsParser` pipeline with a sub-command (see
 [the OptionsParser terminilogy legend](https://github.com/dillonkearns/elm-cli-options-parser#options-parser-terminology)).
 -}
-buildSubCommand : String -> cliOptions -> OptionsParser cliOptions BuilderState.AnyOptions
+buildSubCommand : List String -> cliOptions -> OptionsParser cliOptions BuilderState.AnyOptions
 buildSubCommand subCommandName cliOptionsConstructor =
     OptionsParser
         { usageSpecs = []

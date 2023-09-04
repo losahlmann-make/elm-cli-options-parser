@@ -78,7 +78,7 @@ all =
                     |> Expect.equal "rm [--dry-run] <files>..."
         , test "shows sub optionsParsers" <|
             \() ->
-                OptionsParser.buildSubCommand "init" identity
+                OptionsParser.buildSubCommand [ "init" ] identity
                     |> OptionsParser.end
                     |> OptionsParser.synopsis "elm-test"
                     |> Expect.equal "elm-test init"
@@ -112,7 +112,7 @@ all =
                     |> Expect.equal "elm-test <json|junit|console>"
         , test "sub-optionsParser with flag" <|
             \() ->
-                OptionsParser.buildSubCommand "log" identity
+                OptionsParser.buildSubCommand [ "log" ] identity
                     |> OptionsParser.with (Option.flag "stat")
                     |> OptionsParser.end
                     |> OptionsParser.synopsis "git"

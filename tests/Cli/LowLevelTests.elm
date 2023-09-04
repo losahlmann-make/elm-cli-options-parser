@@ -82,7 +82,7 @@ all =
                         [ OptionsParser.build 123
                             |> OptionsParser.expectFlag "help"
                             |> OptionsParser.end
-                        , OptionsParser.buildSubCommand "sub" 456
+                        , OptionsParser.buildSubCommand [ "sub" ] 456
                             |> OptionsParser.end
                         ]
                 in

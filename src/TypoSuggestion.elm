@@ -7,13 +7,13 @@ import List.Extra
 
 type alias OptionsParser =
     { usageSpecs : List UsageSpec.UsageSpec
-    , subCommand : Maybe String
+    , subCommand : Maybe (List String)
     }
 
 
 type TypoSuggestion
     = Flag String
-    | SubCommand String
+    | SubCommand (List String)
 
 
 suggestionToString : TypoSuggestion -> String
@@ -24,7 +24,7 @@ suggestionToString typoSuggestion =
                     "--" ++ flagName
 
                 SubCommand buildSubCommandName ->
-                    buildSubCommandName
+                    buildSubCommandName |> String.join " "
            )
         ++ "`"
 
@@ -51,7 +51,7 @@ name typoSuggestion =
             suggestionName
 
         SubCommand suggestionName ->
-            suggestionName
+            suggestionName |> String.join " "
 
 
 getSuggestions : List OptionsParser -> String -> List TypoSuggestion

@@ -155,11 +155,11 @@ name usageSpec =
             restArgsDescription
 
 
-synopsis : String -> { optionsParser | usageSpecs : List UsageSpec, description : Maybe String, subCommand : Maybe String } -> String
+synopsis : String -> { optionsParser | usageSpecs : List UsageSpec, description : Maybe String, subCommand : Maybe (List String) } -> String
 synopsis programName { usageSpecs, description, subCommand } =
     programName
         ++ " "
-        ++ ((subCommand
+        ++ (((subCommand |> Maybe.map (String.join " "))
                 :: (usageSpecs
                         |> List.map
                             (\spec ->

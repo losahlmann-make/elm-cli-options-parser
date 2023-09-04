@@ -15,11 +15,11 @@ all =
                 \() ->
                     let
                         cli =
-                            [ subCommand "sub"
+                            [ subCommand [ "sub" ]
                             ]
                     in
                     TypoSuggestion.getSuggestions cli "sub"
-                        |> Expect.equal [ TypoSuggestion.SubCommand "sub" ]
+                        |> Expect.equal [ TypoSuggestion.SubCommand [ "sub" ] ]
             , test "letter swapped in flag name" <|
                 \() ->
                     let
@@ -57,7 +57,7 @@ requiredFlagOptionsParser flagName =
     }
 
 
-subCommand : String -> TypoSuggestion.OptionsParser
+subCommand : List String -> TypoSuggestion.OptionsParser
 subCommand subCommandName =
     { subCommand = Just subCommandName
     , usageSpecs = []
