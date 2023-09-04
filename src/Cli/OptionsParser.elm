@@ -8,6 +8,7 @@ module Cli.OptionsParser exposing
     , hardcoded
     , withDoc
     , getSubCommand, getUsageSpecs, synopsis, tryMatch, end
+    , getDescription
     )
 
 {-|
@@ -163,6 +164,11 @@ synopsis programName optionsParser =
 getSubCommand : OptionsParser cliOptions builderState -> Maybe (List String)
 getSubCommand (OptionsParser { subCommand }) =
     subCommand
+
+
+getDescription : OptionsParser cliOptions builderState -> Maybe String
+getDescription (OptionsParser { description }) =
+    description
 
 
 {-| Low-level function, for internal use.

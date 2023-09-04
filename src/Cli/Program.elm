@@ -333,6 +333,10 @@ run (Config { optionsParsers }) argv versionMessage descriptionMessage =
             Cli.LowLevel.helpText programName versionMessage descriptionMessage optionsParsers
                 |> SystemMessage Cli.ExitStatus.Success
 
+        Cli.LowLevel.ShowCommandHelp subCommand ->
+            Cli.LowLevel.commandHelpText programName optionsParsers subCommand
+                |> SystemMessage Cli.ExitStatus.Success
+
         Cli.LowLevel.ShowVersion ->
             versionMessage
                 |> SystemMessage Cli.ExitStatus.Success

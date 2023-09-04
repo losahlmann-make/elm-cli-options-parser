@@ -1,6 +1,7 @@
-module Cli.LowLevel exposing (MatchResult(..), helpText, try)
+module Cli.LowLevel exposing (MatchResult(..), commandHelpText, helpText, try)
 
 import Cli.Decode
+import Cli.Option as Option
 import Cli.OptionsParser as OptionsParser exposing (OptionsParser)
 import Cli.OptionsParser.BuilderState as BuilderState
 import Cli.OptionsParser.MatchResult as MatchResult exposing (MatchResult)
@@ -13,6 +14,7 @@ type MatchResult msg
     | NoMatch (List String)
     | Match msg
     | ShowHelp
+    | ShowCommandHelp (List String)
     | ShowVersion
 
 
@@ -45,6 +47,8 @@ try optionsParsers argv =
             )
                 ++ [ helpParser
                         |> OptionsParser.end
+                        |> OptionsParser.map SystemParser
+                   , commandHelpParser
                         |> OptionsParser.map SystemParser
                    , showVersionParser
                         |> OptionsParser.end
@@ -99,6 +103,13 @@ helpParser =
         |> OptionsParser.expectFlag "help"
 
 
+commandHelpParser : OptionsParser (MatchResult msg) BuilderState.NoMoreOptions
+commandHelpParser =
+    OptionsParser.build ShowCommandHelp
+        |> OptionsParser.expectFlag "help"
+        |> OptionsParser.withRestArgs (Option.restArgs "subCommand")
+
+
 showVersionParser : OptionsParser (MatchResult msg) BuilderState.AnyOptions
 showVersionParser =
     OptionsParser.build ShowVersion
@@ -131,6 +142,45 @@ helpText programName version description optionsParsers =
         ++ flagsText
         ++ "\n"
         ++ commandsText optionsParsers
+
+
+commandHelpText : String -> List (OptionsParser msg builderState) -> List String -> String
+commandHelpText programName optionsParsers subCommand =
+    let
+        optionsParser =
+            optionsParsers
+                |> List.Extra.findMap
+                    (\optParser ->
+                        case OptionsParser.getSubCommand optParser of
+                            Just subCmd ->
+                                if subCmd == subCommand then
+                                    Just optParser
+
+                                else
+                                    Nothing
+
+                            Nothing ->
+                                Nothing
+                    )
+
+        description =
+            "Description"
+    in
+    case optionsParser of
+        Just optParser ->
+            programName
+                ++ " "
+                ++ String.join " " subCommand
+                ++ "\n"
+                ++ (OptionsParser.getDescription optParser
+                        |> Maybe.map (\desc -> desc ++ "\n\n")
+                        |> Maybe.withDefault "\n"
+                   )
+                ++ "USAGE\n    "
+                ++ OptionsParser.synopsis programName optParser
+
+        Nothing ->
+            "No matching optionsParser..."
 
 
 
