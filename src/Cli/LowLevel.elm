@@ -117,8 +117,13 @@ oneOf =
         Nothing
 
 
-helpText : String -> List (OptionsParser msg builderState) -> String
-helpText programName optionsParsers =
-    optionsParsers
-        |> List.map (OptionsParser.synopsis programName)
-        |> String.join "\n"
+helpText : String -> String -> List (OptionsParser msg builderState) -> String
+helpText programName version optionsParsers =
+    programName
+        ++ " "
+        ++ version
+        ++ "\n"
+        ++ (optionsParsers
+                |> List.map (OptionsParser.synopsis programName)
+                |> String.join "\n"
+           )
