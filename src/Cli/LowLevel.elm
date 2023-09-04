@@ -125,7 +125,16 @@ helpText programName version description optionsParsers =
         ++ "\n"
         ++ description
         ++ "\n\n"
+        ++ usageText programName
         ++ (optionsParsers
                 |> List.map (OptionsParser.synopsis programName)
                 |> String.join "\n"
            )
+
+
+usageText : String -> String
+usageText programName =
+    "USAGE\n    "
+        ++ programName
+        ++ " <COMMAND> <SUBCOMMAND> [FLAGS]"
+        ++ "\n\n"
