@@ -129,6 +129,7 @@ type alias FlagsIncludingArgv flagsRecord =
     { flagsRecord
         | argv : List String
         , versionMessage : String
+        , descriptionMessage : String
     }
 
 
@@ -211,7 +212,7 @@ init options flags =
     let
         matchResult : RunResult options
         matchResult =
-            run options.config flags.argv flags.versionMessage
+            run options.config flags.argv flags.versionMessage flags.descriptionMessage
 
         cmd =
             case matchResult of
@@ -242,7 +243,7 @@ statefulInit options flags =
     let
         matchResult : RunResult cliOptions
         matchResult =
-            run options.config flags.argv flags.versionMessage
+            run options.config flags.argv flags.versionMessage flags.descriptionMessage
 
         cmd =
             case matchResult of
@@ -264,8 +265,8 @@ statefulInit options flags =
     cmd
 
 
-run : Config msg -> List String -> String -> RunResult msg
-run (Config { optionsParsers }) argv versionMessage =
+run : Config msg -> List String -> String -> String -> RunResult msg
+run (Config { optionsParsers }) argv versionMessage descriptionMessage =
     let
         programName =
             case argv of
@@ -288,7 +289,7 @@ run (Config { optionsParsers }) argv versionMessage =
         Cli.LowLevel.NoMatch unexpectedOptions ->
             if unexpectedOptions == [] then
                 "\nNo matching optionsParser...\n\nUsage:\n\n"
-                    ++ Cli.LowLevel.helpText programName versionMessage optionsParsers
+                    ++ Cli.LowLevel.helpText programName versionMessage descriptionMessage optionsParsers
                     |> SystemMessage Cli.ExitStatus.Failure
 
             else
@@ -329,7 +330,7 @@ run (Config { optionsParsers }) argv versionMessage =
                 |> CustomMatch
 
         Cli.LowLevel.ShowHelp ->
-            Cli.LowLevel.helpText programName versionMessage optionsParsers
+            Cli.LowLevel.helpText programName versionMessage descriptionMessage optionsParsers
                 |> SystemMessage Cli.ExitStatus.Success
 
         Cli.LowLevel.ShowVersion ->
