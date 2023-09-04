@@ -5,6 +5,7 @@ import Cli.Option as Option
 import Cli.OptionsParser as OptionsParser exposing (OptionsParser)
 import Cli.OptionsParser.BuilderState as BuilderState
 import Cli.OptionsParser.MatchResult as MatchResult exposing (MatchResult)
+import Dict exposing (Dict)
 import List.Extra
 import Set exposing (Set)
 
@@ -129,8 +130,8 @@ oneOf =
         Nothing
 
 
-helpText : String -> String -> String -> List (OptionsParser msg builderState) -> String
-helpText programName version description optionsParsers =
+helpText : String -> String -> String -> Dict String String -> List (OptionsParser msg builderState) -> String
+helpText programName version description commandDescriptions optionsParsers =
     programName
         ++ " "
         ++ version
@@ -141,7 +142,7 @@ helpText programName version description optionsParsers =
         ++ "\n\n"
         ++ flagsText
         ++ "\n"
-        ++ commandsText optionsParsers
+        ++ commandsText commandDescriptions optionsParsers
 
 
 commandHelpText : String -> List (OptionsParser msg builderState) -> List String -> String
@@ -205,12 +206,13 @@ flagsText =
     """
 
 
-commandsText : List (OptionsParser msg builderState) -> String
-commandsText optionsParsers =
+commandsText : Dict String String -> List (OptionsParser msg builderState) -> String
+commandsText commandDescriptions optionsParsers =
     optionsParsers
         |> List.map (OptionsParser.getSubCommand >> Maybe.andThen List.head)
         |> List.filterMap identity
         |> List.Extra.unique
+        |> List.map (\command -> String.padRight 16 ' ' command ++ (Dict.get command commandDescriptions |> Maybe.withDefault ""))
         |> List.map (String.append "    ")
         |> String.join "\n"
         |> (++) "COMMANDS\n"

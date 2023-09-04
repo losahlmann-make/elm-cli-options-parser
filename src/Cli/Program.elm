@@ -4,6 +4,7 @@ module Cli.Program exposing
     , StatelessProgram, StatefulProgram
     , FlagsIncludingArgv
     , mapConfig
+    , withCommandDescriptions
     )
 
 {-|
@@ -71,6 +72,7 @@ import Cli.ExitStatus exposing (ExitStatus)
 import Cli.LowLevel
 import Cli.OptionsParser as OptionsParser exposing (OptionsParser)
 import Cli.OptionsParser.BuilderState as BuilderState
+import Dict exposing (Dict)
 import List.Extra
 import TypoSuggestion
 
@@ -86,6 +88,7 @@ Command-Line Interface, as well as its meta-data such as version number.
 type Config msg
     = Config
         { optionsParsers : List (OptionsParser msg BuilderState.NoMoreOptions)
+        , commandDescriptions : Dict String String
         }
 
 
@@ -96,6 +99,7 @@ config : Config decodesTo
 config =
     Config
         { optionsParsers = []
+        , commandDescriptions = Dict.empty
         }
 
 
@@ -266,7 +270,7 @@ statefulInit options flags =
 
 
 run : Config msg -> List String -> String -> String -> RunResult msg
-run (Config { optionsParsers }) argv versionMessage descriptionMessage =
+run (Config { optionsParsers, commandDescriptions }) argv versionMessage descriptionMessage =
     let
         programName =
             case argv of
@@ -289,7 +293,7 @@ run (Config { optionsParsers }) argv versionMessage descriptionMessage =
         Cli.LowLevel.NoMatch unexpectedOptions ->
             if unexpectedOptions == [] then
                 "\nNo matching optionsParser...\n\nUsage:\n\n"
-                    ++ Cli.LowLevel.helpText programName versionMessage descriptionMessage optionsParsers
+                    ++ Cli.LowLevel.helpText programName versionMessage descriptionMessage commandDescriptions optionsParsers
                     |> SystemMessage Cli.ExitStatus.Failure
 
             else
@@ -330,7 +334,7 @@ run (Config { optionsParsers }) argv versionMessage descriptionMessage =
                 |> CustomMatch
 
         Cli.LowLevel.ShowHelp ->
-            Cli.LowLevel.helpText programName versionMessage descriptionMessage optionsParsers
+            Cli.LowLevel.helpText programName versionMessage descriptionMessage commandDescriptions optionsParsers
                 |> SystemMessage Cli.ExitStatus.Success
 
         Cli.LowLevel.ShowCommandHelp subCommand ->
@@ -350,4 +354,10 @@ mapConfig mapFn (Config configValue) =
         { optionsParsers =
             configValue.optionsParsers
                 |> List.map (OptionsParser.map mapFn)
+        , commandDescriptions = configValue.commandDescriptions
         }
+
+
+withCommandDescriptions : Dict String String -> Config a -> Config a
+withCommandDescriptions commandDescriptions (Config configValue) =
+    Config { configValue | commandDescriptions = commandDescriptions }
