@@ -194,7 +194,10 @@ synopsis programName { usageSpecs, description, subCommand } =
                 |> List.filterMap identity
                 |> String.join " "
            )
-        ++ (description |> Maybe.map (\doc -> " # " ++ doc) |> Maybe.withDefault "")
+
+
+
+-- ++ (description |> Maybe.map (\doc -> " # " ++ doc) |> Maybe.withDefault "")
 
 
 mutuallyExclusiveSynopsis : MutuallyExclusiveValues -> String
