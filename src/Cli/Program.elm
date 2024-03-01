@@ -294,6 +294,7 @@ run (Config { optionsParsers, commandDescriptions }) argv versionMessage descrip
             if unexpectedOptions == [] then
                 "\nNo matching optionsParser...\n\nUsage:\n\n"
                     ++ Cli.LowLevel.helpText programName versionMessage descriptionMessage commandDescriptions optionsParsers
+                    ++ "\n"
                     |> SystemMessage Cli.ExitStatus.Failure
 
             else
@@ -335,14 +336,17 @@ run (Config { optionsParsers, commandDescriptions }) argv versionMessage descrip
 
         Cli.LowLevel.ShowHelp ->
             Cli.LowLevel.helpText programName versionMessage descriptionMessage commandDescriptions optionsParsers
+                ++ "\n"
                 |> SystemMessage Cli.ExitStatus.Success
 
         Cli.LowLevel.ShowCommandHelp subCommand ->
             Cli.LowLevel.commandHelpText programName optionsParsers subCommand
+                ++ "\n"
                 |> SystemMessage Cli.ExitStatus.Success
 
         Cli.LowLevel.ShowVersion ->
             versionMessage
+                ++ "\n"
                 |> SystemMessage Cli.ExitStatus.Success
 
 
