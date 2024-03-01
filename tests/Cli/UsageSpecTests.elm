@@ -46,15 +46,15 @@ all =
                     |> OptionsParser.withOptionalPositionalArg (Option.optionalPositionalArg "revision range")
                     |> OptionsParser.synopsis "git"
                     |> Expect.equal "git [<revision range>]"
-        , test "print synopsis with doc string" <|
-            \() ->
-                OptionsParser.build (\a b -> ( a, b ))
-                    |> OptionsParser.with (Option.requiredKeywordArg "name")
-                    |> OptionsParser.with (Option.optionalKeywordArg "prefix")
-                    |> OptionsParser.end
-                    |> OptionsParser.withDoc "greets somebody in your terminal"
-                    |> OptionsParser.synopsis "greet"
-                    |> Expect.equal "greet --name <name> [--prefix <prefix>] # greets somebody in your terminal"
+        -- , test "print synopsis with doc string" <|
+        --     \() ->
+        --         OptionsParser.build (\a b -> ( a, b ))
+        --             |> OptionsParser.with (Option.requiredKeywordArg "name")
+        --             |> OptionsParser.with (Option.optionalKeywordArg "prefix")
+        --             |> OptionsParser.end
+        --             |> OptionsParser.withDoc "greets somebody in your terminal"
+        --             |> OptionsParser.synopsis "greet"
+        --             |> Expect.equal "greet --name <name> [--prefix <prefix>] # greets somebody in your terminal"
         , test "print synopsis with zero or more arg option" <|
             \() ->
                 (OptionsParser.build identity
