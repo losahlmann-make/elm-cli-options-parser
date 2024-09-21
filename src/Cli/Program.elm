@@ -85,9 +85,9 @@ type RunResult match
 {-| A `Cli.Program.Config` is used to build up a set of `OptionsParser`s for your
 Command-Line Interface, as well as its meta-data such as version number.
 -}
-type Config msg
+type Config cliOptions
     = Config
-        { optionsParsers : List (OptionsParser msg BuilderState.NoMoreOptions)
+        { optionsParsers : List (OptionsParser cliOptions BuilderState.NoMoreOptions)
         , commandDescriptions : Dict String String
         }
 
@@ -95,7 +95,7 @@ type Config msg
 {-| Create a `Config` with no `OptionsParser`s. Use `Cli.Program.add` to add
 `OptionsParser`s.
 -}
-config : Config decodesTo
+config : Config cliOptions
 config =
     Config
         { optionsParsers = []
@@ -105,7 +105,7 @@ config =
 
 {-| Add an `OptionsParser` to your `Cli.Program.Config`.
 -}
-add : OptionsParser msg anything -> Config msg -> Config msg
+add : OptionsParser cliOptions anything -> Config cliOptions -> Config cliOptions
 add optionsParser (Config ({ optionsParsers } as programRecord)) =
     Config
         { programRecord

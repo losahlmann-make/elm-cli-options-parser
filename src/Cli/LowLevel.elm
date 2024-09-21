@@ -10,10 +10,10 @@ import List.Extra
 import Set exposing (Set)
 
 
-type MatchResult msg
+type MatchResult cliOptions
     = ValidationErrors (List Cli.Decode.ValidationError)
     | NoMatch (List String)
-    | Match msg
+    | Match cliOptions
     | ShowHelp
     | ShowCommandHelp (List String)
     | ShowVersion
@@ -33,12 +33,12 @@ intersection sets =
                 |> Set.intersect first
 
 
-type CombinedParser userOptions
-    = SystemParser (MatchResult userOptions)
-    | UserParser userOptions
+type CombinedParser cliOptions
+    = SystemParser (MatchResult cliOptions)
+    | UserParser cliOptions
 
 
-try : List (OptionsParser.OptionsParser msg builderState) -> List String -> MatchResult msg
+try : List (OptionsParser.OptionsParser cliOptions builderState) -> List String -> MatchResult cliOptions
 try optionsParsers argv =
     let
         matchResults =
