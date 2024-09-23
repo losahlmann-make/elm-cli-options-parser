@@ -5,6 +5,7 @@ module Cli.Program exposing
     , FlagsIncludingArgv
     , mapConfig
     , withCommandDescriptions
+    , withGlobalOptions
     )
 
 {-|
