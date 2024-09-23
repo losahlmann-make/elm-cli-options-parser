@@ -6,6 +6,10 @@ import Expect exposing (Expectation)
 import Test exposing (..)
 
 
+noGlobalOptions =
+    OptionsParser.build () |> OptionsParser.end
+
+
 all : Test
 all =
     describe "synopsis"
@@ -18,8 +22,8 @@ all =
                             |> OptionsParser.end
                         ]
                 in
-                Cli.LowLevel.try cli [ "", "", "--help" ]
-                    |> Expect.equal (Cli.LowLevel.Match 123)
+                Cli.LowLevel.try noGlobalOptions cli [ "", "", "--help" ]
+                    |> Expect.equal (Cli.LowLevel.Match () 123)
         , test "non-matching optionsParser" <|
             \() ->
                 let
@@ -29,7 +33,7 @@ all =
                             |> OptionsParser.end
                         ]
                 in
-                Cli.LowLevel.try cli [ "", "" ]
+                Cli.LowLevel.try noGlobalOptions cli [ "", "" ]
                     |> Expect.equal (Cli.LowLevel.NoMatch [])
         , test "unknown flag" <|
             \() ->
@@ -40,7 +44,7 @@ all =
                             |> OptionsParser.end
                         ]
                 in
-                Cli.LowLevel.try cli [ "", "", "--unknown-flag" ]
+                Cli.LowLevel.try noGlobalOptions cli [ "", "", "--unknown-flag" ]
                     |> Expect.equal (Cli.LowLevel.NoMatch [ "unknown-flag" ])
         , test "unknown flag with multiple usage specs" <|
             \() ->
@@ -54,7 +58,7 @@ all =
                             |> OptionsParser.end
                         ]
                 in
-                Cli.LowLevel.try cli [ "", "", "--unknown-flag" ]
+                Cli.LowLevel.try noGlobalOptions cli [ "", "", "--unknown-flag" ]
                     |> Expect.equal (Cli.LowLevel.NoMatch [ "unknown-flag" ])
         , test "help" <|
             \() ->
@@ -65,7 +69,7 @@ all =
                             |> OptionsParser.end
                         ]
                 in
-                Cli.LowLevel.try cli [ "", "", "--help" ]
+                Cli.LowLevel.try noGlobalOptions cli [ "", "", "--help" ]
                     |> Expect.equal Cli.LowLevel.ShowHelp
         , test "version" <|
             \() ->
@@ -73,7 +77,7 @@ all =
                     cli =
                         []
                 in
-                Cli.LowLevel.try cli [ "", "", "--version" ]
+                Cli.LowLevel.try noGlobalOptions cli [ "", "", "--version" ]
                     |> Expect.equal Cli.LowLevel.ShowVersion
         , test "unknown flag with a suboptionsParser spec" <|
             \() ->
@@ -86,6 +90,6 @@ all =
                             |> OptionsParser.end
                         ]
                 in
-                Cli.LowLevel.try cli [ "", "", "--unknown-flag" ]
+                Cli.LowLevel.try noGlobalOptions cli [ "", "", "--unknown-flag" ]
                     |> Expect.equal (Cli.LowLevel.NoMatch [ "unknown-flag" ])
         ]

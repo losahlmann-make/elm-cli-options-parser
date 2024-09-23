@@ -173,8 +173,8 @@ getDescription (OptionsParser { description }) =
 
 {-| Low-level function, for internal use.
 -}
-tryMatch : List String -> OptionsParser cliOptions builderState -> Cli.OptionsParser.MatchResult.MatchResult cliOptions
-tryMatch argv ((OptionsParser { usageSpecs, subCommand }) as optionsParser) =
+tryMatch : List String -> OptionsParser globalOptions globalBuilderState -> OptionsParser cliOptions builderState -> Cli.OptionsParser.MatchResult.MatchResult globalOptions cliOptions
+tryMatch argv globalOptionsParser ((OptionsParser { usageSpecs, subCommand }) as optionsParser) =
     let
         decoder =
             optionsParser
@@ -183,7 +183,8 @@ tryMatch argv ((OptionsParser { usageSpecs, subCommand }) as optionsParser) =
                 |> getDecoder
 
         flagsAndOperands =
-            Tokenizer.flagsAndOperands usageSpecs argv
+            -- TODO: also parse GlobalOptions, use its usageSpecs: join list of usageSpecs
+            Tokenizer.flagsAndOperands (usageSpecs ++ getUsageSpecs globalOptionsParser) argv
                 |> (\record ->
                         case ( subCommand, record.operands ) of
                             ( Nothing, _ ) ->
@@ -210,10 +211,32 @@ tryMatch argv ((OptionsParser { usageSpecs, subCommand }) as optionsParser) =
                             ( Just buildSubCommandName, [] ) ->
                                 Err { errorMessage = "No sub optionsParser provided", options = record.options }
                    )
+
+        globalOptionsResult =
+            case flagsAndOperands of
+                Ok a ->
+                    getDecoder globalOptionsParser a
+
+                Err e ->
+                    Err (Cli.Decode.MatchError e.errorMessage)
     in
     case flagsAndOperands of
         Ok actualFlagsAndOperands ->
-            decoder actualFlagsAndOperands
+            -- remove GlobalOptions from flagsAndOperands.options
+            { actualFlagsAndOperands
+                | options =
+                    actualFlagsAndOperands.options
+                        |> List.filter
+                            (\((Tokenizer.ParsedOption optionName optionKind) as parsedOption) ->
+                                case UsageSpec.optionExists (getUsageSpecs globalOptionsParser) optionName of
+                                    Just _ ->
+                                        False
+
+                                    Nothing ->
+                                        True
+                            )
+            }
+                |> decoder
                 |> (\result ->
                         case result of
                             Err error ->
@@ -227,8 +250,16 @@ tryMatch argv ((OptionsParser { usageSpecs, subCommand }) as optionsParser) =
                                     Cli.Decode.UnexpectedOptions unexpectedOptions ->
                                         Cli.OptionsParser.MatchResult.NoMatch unexpectedOptions
 
-                            Ok ( [], value ) ->
-                                Cli.OptionsParser.MatchResult.Match (Ok value)
+                            Ok ( [], cliOptions ) ->
+                                case globalOptionsResult of
+                                    Ok ( [], globalOptions ) ->
+                                        Cli.OptionsParser.MatchResult.Match (Ok ( globalOptions, cliOptions ))
+
+                                    Ok ( validationErrors, _ ) ->
+                                        Cli.OptionsParser.MatchResult.Match (Err validationErrors)
+
+                                    Err _ ->
+                                        Cli.OptionsParser.MatchResult.NoMatch []
 
                             Ok ( validationErrors, value ) ->
                                 Cli.OptionsParser.MatchResult.Match (Err validationErrors)

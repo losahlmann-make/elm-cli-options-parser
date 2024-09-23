@@ -446,13 +446,36 @@ all =
                         )
                         "hardcoded value"
             ]
+        , describe "global options"
+            [ test "options with argument" <|
+                \() ->
+                    expectMatchWithGlobals [ "--name", "Deanna", "--output", "test.txt", "--prefix", "Hello" ]
+                        (OptionsParser.build (\a b -> ( a, b ))
+                            |> OptionsParser.with (Option.requiredKeywordArg "name")
+                            |> OptionsParser.with (Option.optionalKeywordArg "prefix")
+                            |> OptionsParser.end
+                        )
+                        (OptionsParser.build (\a b -> ( a, b ))
+                            |> OptionsParser.with (Option.requiredKeywordArg "output")
+                            |> OptionsParser.with (Option.optionalKeywordArg "format")
+                            |> OptionsParser.end
+                        )
+                        ( "Deanna", Just "Hello" )
+                        ( "test.txt", Nothing )
+            ]
         ]
 
 
 expectMatch : List String -> OptionsParser.OptionsParser a builderState -> a -> Expectation
 expectMatch argv optionsParsers expectedValue =
-    OptionsParser.tryMatch argv optionsParsers
-        |> Expect.equal (Cli.OptionsParser.MatchResult.Match (Ok expectedValue))
+    OptionsParser.tryMatch argv (OptionsParser.build ()) optionsParsers
+        |> Expect.equal (Cli.OptionsParser.MatchResult.Match (Ok ( (), expectedValue )))
+
+
+expectMatchWithGlobals : List String -> OptionsParser.OptionsParser a builderState -> OptionsParser.OptionsParser b builderStateB -> a -> b -> Expectation
+expectMatchWithGlobals argv optionsParsers globalOptionsParser expectedValue expectedGlobals =
+    OptionsParser.tryMatch argv globalOptionsParser optionsParsers
+        |> Expect.equal (Cli.OptionsParser.MatchResult.Match (Ok ( expectedGlobals, expectedValue )))
 
 
 expectValidationErrors :
@@ -461,13 +484,13 @@ expectValidationErrors :
     -> List { invalidReason : String, name : String }
     -> Expectation
 expectValidationErrors argv optionsParsers expectedErrors =
-    OptionsParser.tryMatch argv optionsParsers
+    OptionsParser.tryMatch argv (OptionsParser.build ()) optionsParsers
         |> Expect.equal (Cli.OptionsParser.MatchResult.Match (Err expectedErrors))
 
 
 expectNoMatch : List String -> OptionsParser.OptionsParser a builderState -> Expectation
 expectNoMatch argv optionsParsers =
-    case OptionsParser.tryMatch argv optionsParsers of
+    case OptionsParser.tryMatch argv (OptionsParser.build ()) optionsParsers of
         Cli.OptionsParser.MatchResult.NoMatch unexpectedOptions ->
             Expect.pass
 

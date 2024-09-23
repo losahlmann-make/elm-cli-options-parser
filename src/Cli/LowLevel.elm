@@ -10,10 +10,10 @@ import List.Extra
 import Set exposing (Set)
 
 
-type MatchResult cliOptions
+type MatchResult globalOptions cliOptions
     = ValidationErrors (List Cli.Decode.ValidationError)
     | NoMatch (List String)
-    | Match cliOptions
+    | Match globalOptions cliOptions
     | ShowHelp
     | ShowCommandHelp (List String)
     | ShowVersion
@@ -33,13 +33,13 @@ intersection sets =
                 |> Set.intersect first
 
 
-type CombinedParser cliOptions
-    = SystemParser (MatchResult cliOptions)
+type CombinedParser globalOptions cliOptions
+    = SystemParser (MatchResult globalOptions cliOptions)
     | UserParser cliOptions
 
 
-try : List (OptionsParser.OptionsParser cliOptions builderState) -> List String -> MatchResult cliOptions
-try optionsParsers argv =
+try : OptionsParser.OptionsParser globalOptions globalBuilderState -> List (OptionsParser.OptionsParser cliOptions builderState) -> List String -> MatchResult globalOptions cliOptions
+try globalOptionsParser optionsParsers argv =
     let
         matchResults =
             (optionsParsers
@@ -58,7 +58,7 @@ try optionsParsers argv =
                 |> List.map
                     (argv
                         |> List.drop 2
-                        |> OptionsParser.tryMatch
+                        |> (\a -> OptionsParser.tryMatch a globalOptionsParser)
                     )
 
         commonUnmatchedFlags =
@@ -82,13 +82,13 @@ try optionsParsers argv =
                 case maybeResult of
                     Just result ->
                         case result of
-                            Ok msg ->
+                            Ok ( globalOptions, msg ) ->
                                 case msg of
                                     SystemParser systemMsg ->
                                         systemMsg
 
                                     UserParser userMsg ->
-                                        Match userMsg
+                                        Match globalOptions userMsg
 
                             Err validationErrors ->
                                 ValidationErrors validationErrors
@@ -98,20 +98,20 @@ try optionsParsers argv =
            )
 
 
-helpParser : OptionsParser (MatchResult msg) BuilderState.AnyOptions
+helpParser : OptionsParser (MatchResult globalOptions msg) BuilderState.AnyOptions
 helpParser =
     OptionsParser.build ShowHelp
         |> OptionsParser.expectFlag "help"
 
 
-commandHelpParser : OptionsParser (MatchResult msg) BuilderState.NoMoreOptions
+commandHelpParser : OptionsParser (MatchResult globalOptions msg) BuilderState.NoMoreOptions
 commandHelpParser =
     OptionsParser.build ShowCommandHelp
         |> OptionsParser.expectFlag "help"
         |> OptionsParser.withRestArgs (Option.restArgs "subCommand")
 
 
-showVersionParser : OptionsParser (MatchResult msg) BuilderState.AnyOptions
+showVersionParser : OptionsParser (MatchResult globalOptions msg) BuilderState.AnyOptions
 showVersionParser =
     OptionsParser.build ShowVersion
         |> OptionsParser.expectFlag "version"

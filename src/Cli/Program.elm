@@ -77,17 +77,18 @@ import List.Extra
 import TypoSuggestion
 
 
-type RunResult match
+type RunResult globalOptions match
     = SystemMessage ExitStatus String
-    | CustomMatch match
+    | CustomMatch globalOptions match
 
 
 {-| A `Cli.Program.Config` is used to build up a set of `OptionsParser`s for your
 Command-Line Interface, as well as its meta-data such as version number.
 -}
-type Config cliOptions
+type Config globalOptions cliOptions
     = Config
         { optionsParsers : List (OptionsParser cliOptions BuilderState.NoMoreOptions)
+        , globalOptionsParser : OptionsParser globalOptions BuilderState.NoMoreOptions
         , commandDescriptions : Dict String String
         }
 
@@ -95,17 +96,18 @@ type Config cliOptions
 {-| Create a `Config` with no `OptionsParser`s. Use `Cli.Program.add` to add
 `OptionsParser`s.
 -}
-config : Config cliOptions
+config : Config () cliOptions
 config =
     Config
         { optionsParsers = []
+        , globalOptionsParser = OptionsParser.build () |> OptionsParser.end
         , commandDescriptions = Dict.empty
         }
 
 
 {-| Add an `OptionsParser` to your `Cli.Program.Config`.
 -}
-add : OptionsParser cliOptions anything -> Config cliOptions -> Config cliOptions
+add : OptionsParser cliOptions anything -> Config globalOptions cliOptions -> Config globalOptions cliOptions
 add optionsParser (Config ({ optionsParsers } as programRecord)) =
     Config
         { programRecord
@@ -143,7 +145,7 @@ type alias StatelessProgram msg flags =
 
 
 {-| -}
-stateless : ProgramOptions msg options flags -> StatelessProgram msg flags
+stateless : ProgramOptions msg globalOptions cliOptions flags -> StatelessProgram msg flags
 stateless options =
     Platform.worker
         { init = init options
@@ -157,13 +159,13 @@ type alias StatefulProgram model msg cliOptions flags =
     Platform.Program (FlagsIncludingArgv flags) (StatefulProgramModel model cliOptions) msg
 
 
-type alias StatefulOptions msg model cliOptions flags =
+type alias StatefulOptions msg model globalOptions cliOptions flags =
     { printAndExitFailure : String -> Cmd msg
     , printAndExitSuccess : String -> Cmd msg
-    , init : FlagsIncludingArgv flags -> cliOptions -> ( model, Cmd msg )
+    , init : FlagsIncludingArgv flags -> globalOptions -> cliOptions -> ( model, Cmd msg )
     , update : cliOptions -> msg -> model -> ( model, Cmd msg )
     , subscriptions : model -> Sub msg
-    , config : Config cliOptions
+    , config : Config globalOptions cliOptions
     }
 
 
@@ -172,7 +174,7 @@ and `update`. It also has `subscriptions`. See
 [the `Curl.elm` example](https://github.com/dillonkearns/elm-cli-options-parser/blob/master/examples/src/Curl.elm).
 -}
 stateful :
-    StatefulOptions msg model cliOptions flags
+    StatefulOptions msg model globalOptions cliOptions flags
     -> Platform.Program (FlagsIncludingArgv flags) (StatefulProgramModel model cliOptions) msg
 stateful options =
     Platform.worker
@@ -200,21 +202,21 @@ stateful options =
         }
 
 
-type alias ProgramOptions decodesTo options flags =
+type alias ProgramOptions decodesTo globalOptions cliOptions flags =
     { printAndExitFailure : String -> Cmd decodesTo
     , printAndExitSuccess : String -> Cmd decodesTo
-    , init : FlagsIncludingArgv flags -> options -> Cmd decodesTo
-    , config : Config options
+    , init : FlagsIncludingArgv flags -> globalOptions -> cliOptions -> Cmd decodesTo
+    , config : Config globalOptions cliOptions
     }
 
 
 init :
-    ProgramOptions msg options flags
+    ProgramOptions msg globalOptions cliOptions flags
     -> FlagsIncludingArgv flags
     -> ( (), Cmd msg )
 init options flags =
     let
-        matchResult : RunResult options
+        matchResult : RunResult globalOptions cliOptions
         matchResult =
             run options.config flags.argv flags.versionMessage flags.descriptionMessage
 
@@ -228,8 +230,8 @@ init options flags =
                         Cli.ExitStatus.Success ->
                             options.printAndExitSuccess message
 
-                CustomMatch msg ->
-                    options.init flags msg
+                CustomMatch globalOptions msg ->
+                    options.init flags globalOptions msg
     in
     ( (), cmd )
 
@@ -240,12 +242,12 @@ type StatefulProgramModel model cliOptions
 
 
 statefulInit :
-    StatefulOptions msg model cliOptions flags
+    StatefulOptions msg model globalOptions cliOptions flags
     -> FlagsIncludingArgv flags
     -> ( StatefulProgramModel model cliOptions, Cmd msg )
 statefulInit options flags =
     let
-        matchResult : RunResult cliOptions
+        matchResult : RunResult globalOptions cliOptions
         matchResult =
             run options.config flags.argv flags.versionMessage flags.descriptionMessage
 
@@ -259,18 +261,18 @@ statefulInit options flags =
                         Cli.ExitStatus.Success ->
                             ( ShowSystemMessage, options.printAndExitSuccess message )
 
-                CustomMatch cliOptions ->
+                CustomMatch globalOptions cliOptions ->
                     let
                         ( userModel, userCmd ) =
-                            options.init flags cliOptions
+                            options.init flags globalOptions cliOptions
                     in
                     ( UserModel userModel cliOptions, userCmd )
     in
     cmd
 
 
-run : Config msg -> List String -> String -> String -> RunResult msg
-run (Config { optionsParsers, commandDescriptions }) argv versionMessage descriptionMessage =
+run : Config globalOptions cliOptions -> List String -> String -> String -> RunResult globalOptions cliOptions
+run (Config { optionsParsers, globalOptionsParser, commandDescriptions }) argv versionMessage descriptionMessage =
     let
         programName =
             case argv of
@@ -287,7 +289,7 @@ run (Config { optionsParsers, commandDescriptions }) argv versionMessage descrip
             "TODO - show error message explaining that user needs to pass unmodified `process.argv` from node here."
 
         matchResult =
-            Cli.LowLevel.try optionsParsers argv
+            Cli.LowLevel.try globalOptionsParser optionsParsers argv
     in
     case matchResult of
         Cli.LowLevel.NoMatch unexpectedOptions ->
@@ -330,9 +332,8 @@ run (Config { optionsParsers, commandDescriptions }) argv versionMessage descrip
             )
                 |> SystemMessage Cli.ExitStatus.Failure
 
-        Cli.LowLevel.Match msg ->
-            msg
-                |> CustomMatch
+        Cli.LowLevel.Match globalOptions msg ->
+            CustomMatch globalOptions msg
 
         Cli.LowLevel.ShowHelp ->
             Cli.LowLevel.helpText programName versionMessage descriptionMessage commandDescriptions optionsParsers
@@ -352,16 +353,26 @@ run (Config { optionsParsers, commandDescriptions }) argv versionMessage descrip
 
 {-| Transform the return type for all of the registered `OptionsParser`'s in the `Config`.
 -}
-mapConfig : (a -> b) -> Config a -> Config b
+mapConfig : (a -> b) -> Config globalOptions a -> Config globalOptions b
 mapConfig mapFn (Config configValue) =
     Config
         { optionsParsers =
             configValue.optionsParsers
                 |> List.map (OptionsParser.map mapFn)
+        , globalOptionsParser = configValue.globalOptionsParser
         , commandDescriptions = configValue.commandDescriptions
         }
 
 
-withCommandDescriptions : Dict String String -> Config a -> Config a
+withCommandDescriptions : Dict String String -> Config globalOptions a -> Config globalOptions a
 withCommandDescriptions commandDescriptions (Config configValue) =
     Config { configValue | commandDescriptions = commandDescriptions }
+
+
+withGlobalOptions : OptionsParser globalOptions BuilderState.NoMoreOptions -> Config g a -> Config globalOptions a
+withGlobalOptions globalOptionsParser (Config configValue) =
+    Config
+        { optionsParsers = configValue.optionsParsers
+        , globalOptionsParser = globalOptionsParser
+        , commandDescriptions = configValue.commandDescriptions
+        }

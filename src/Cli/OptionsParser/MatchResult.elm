@@ -16,14 +16,14 @@ import Cli.Decode
 
 {-| TODO
 -}
-type MatchResult cliOptions
-    = Match (Result (List Cli.Decode.ValidationError) cliOptions)
+type MatchResult globalOptions cliOptions
+    = Match (Result (List Cli.Decode.ValidationError) ( globalOptions, cliOptions ))
     | NoMatch (List String)
 
 
 {-| TODO
 -}
-matchResultToMaybe : MatchResult cliOptions -> Maybe (Result (List Cli.Decode.ValidationError) cliOptions)
+matchResultToMaybe : MatchResult globalOptions cliOptions -> Maybe (Result (List Cli.Decode.ValidationError) ( globalOptions, cliOptions ))
 matchResultToMaybe matchResult =
     case matchResult of
         Match thing ->
